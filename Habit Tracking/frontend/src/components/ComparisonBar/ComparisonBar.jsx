@@ -1,25 +1,36 @@
 
+import "./comparisonBar.css"
 export default function ComparisonBar({ label, values, danger }) {
-    const max = Math.max(...values.map(v => v.value));
-    return (
-        <div className={`system-compare-bar ${danger ? "danger" : ""}`}>
-            <span className="bar-title">{label}</span>
+  const max = Math.max(...values.map(v => v.value));
 
-            {values.map(v => (
-                <div key={v.name} className="bar-row">
-                    <span className="bar-name">{v.name}</span>
+  return (
+    <div className={`duel-bar ${danger ? "danger" : ""}`}>
+      <span className="duel-label">{label}</span>
 
-                    <div className="bar-track">
-                        <div
-                            className="bar-fill"
-                            style={{ width: `${(v.value / max) * 100}%` }}
-                        />
-                    </div>
+      <div className="duel-track">
+        {values.map((v) => {
+          const isWinner = v.value === max;
 
-                    <span className="bar-value">{v.value}</span>
-                </div>
-            ))}
-        </div>
+          return (
+            <div key={v.name} className="duel-row">
+              <span className="duel-name">{v.name}</span>
 
-    );
+              <div className="duel-meter">
+                <div
+                  className={`duel-fill ${isWinner ? "winner" : "loser"}`}
+                  style={{ width: `${(v.value / max) * 100}%` }}
+                />
+              </div>
+
+              <span
+                className={`duel-value ${isWinner ? "winner" : "loser"}`}
+              >
+                {v.value}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
