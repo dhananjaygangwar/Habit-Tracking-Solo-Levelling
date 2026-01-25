@@ -1,0 +1,51 @@
+.system-compare-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bar-title {
+  font-size: 12px;
+  letter-spacing: 2px;
+  opacity: 0.7;
+}
+
+/* ROW */
+.bar-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 40px;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar-name {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.bar-value {
+  text-align: right;
+  font-size: 12px;
+}
+
+/* TRACK */
+.bar-track {
+  height: 8px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(170,120,255,0.3);
+}
+
+/* FILL */
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a678ff, #6d3bff);
+  box-shadow: 0 0 10px rgba(150,80,255,0.7);
+}
+
+/* DANGER MODE */
+.system-compare-bar.danger .bar-fill {
+  background: linear-gradient(90deg, #ff5c7a, #c73855);
+  box-shadow: 0 0 10px rgba(255,92,122,0.7);
+}
