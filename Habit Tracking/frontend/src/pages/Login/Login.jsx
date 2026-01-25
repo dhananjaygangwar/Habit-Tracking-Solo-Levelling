@@ -6,17 +6,20 @@ import Input from "../../components/Input/Input";
 import Header from "../../components/Header/Header";
 
 import "./login.css";
+import { useAuth } from "../../context/AuthProvider";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
+  const {login} = useAuth();
+
   const handleLogin = (e) => {
     e.preventDefault();
 
-    // replace with real auth later
-    console.log("SYSTEM LOGIN ATTEMPT", { username, password });
-  };
+    login("jwttoken", {"name": "AK"});
+
+};
 
   return (
     <div className="login-page">
