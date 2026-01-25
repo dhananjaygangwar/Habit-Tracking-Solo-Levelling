@@ -22,7 +22,7 @@ export default function QuestList({ title, items, onSelect, className = '', styl
 function QuestItem({ quest, onClick }) {
   return (
     <div
-      className={`quest-item ${quest.completed ? "completed" : ""}`}
+      className={`quest-item ${quest.status == "COMPLETED" ? "completed" : ""}`}
       onClick={onClick}
     >
       <div className="quest-text">
@@ -40,7 +40,7 @@ function QuestItem({ quest, onClick }) {
       </div>
 
       <div className="quest-checkbox">
-        {quest.completed && <span className="checkmark" />}
+        {quest.status == "COMPLETED" && <span className="checkmark" />}
       </div>
     </div>
   );

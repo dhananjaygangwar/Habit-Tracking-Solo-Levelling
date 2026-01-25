@@ -40,6 +40,7 @@ router.use(authMiddleware);
 router.get("/", async (req, res, next) => {
   try {
     const userId = req.userId; 
+    console.log("USERID IS", userId)
 
     const { rows } = await pool.query(`
       SELECT
@@ -187,7 +188,7 @@ router.patch("/:id", async (req, res, next) => {
     const { status } = req.body;
     const userId = req.userId;
 
-    if (!["COMPLETED", "FAILED"].includes(status)) {
+    if (!["COMPLETED", "FAILED", "PENDING"].includes(status)) {
       await client.query("ROLLBACK");
       const error = new Error("Invalid status");
       error.statusCode = 400;
