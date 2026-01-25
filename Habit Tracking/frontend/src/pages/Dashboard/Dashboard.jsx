@@ -119,6 +119,25 @@ export default function Dashboard() {
     }, [quests]);
 
 
+    const onQuestClick = (quest) => {
+
+        setQuests(prev => {
+
+            return prev.map(item => {
+
+                if (item.id == quest.id) {
+                    item.completed = !item.completed;
+                }
+
+                return item;
+
+            });
+
+        })
+
+    }
+
+
 
     return (
         <>
@@ -130,7 +149,7 @@ export default function Dashboard() {
             <QuestList
                 title="Plan"
                 items={pendingQuests}
-                onSelect={(quest) => console.log("OPEN QUEST", quest)}
+                onSelect={onQuestClick}
             />
 
             <br />
@@ -138,14 +157,14 @@ export default function Dashboard() {
             <QuestList
                 title="Completed"
                 items={completedQuests}
-                onSelect={(quest) => console.log("OPEN QUEST", quest)}
+                onSelect={onQuestClick}
             />
 
             <br />
             <QuestList
                 title="Punishments"
                 items={punishmentQuests}
-                onSelect={(quest) => console.log("OPEN QUEST", quest)}
+                onSelect={onQuestClick}
             />
 
         </>
