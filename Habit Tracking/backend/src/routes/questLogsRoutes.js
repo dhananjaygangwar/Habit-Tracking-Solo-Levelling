@@ -44,16 +44,10 @@ router.get("/", async (req, res, next) => {
 
     const { rows } = await pool.query(`
       SELECT
-        ql.id,
-        ql.status,
-        ql.created_at,
-        q.title,
-        q.description,
-        q.quest_type,
-        q.xp_reward
+        *
       FROM quest_logs ql
       JOIN quests q ON q.id = ql.quest_id
-      WHERE ql.user_id = $1
+      WHERE ql.user_id = $1 and complete_by >= NOW()
       ORDER BY ql.created_at DESC
     `, [userId]);
 

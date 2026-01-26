@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import "./systemTimer.css";
+// import "./systemTimer.css";
 
 export default function SystemTimer({
     deadline,          // Date or timestamp (ms)
@@ -39,7 +39,7 @@ export default function SystemTimer({
             className={`system-timer dramatic ${danger ? "danger" : ""} ${className}`}
             style={style}
         >
-            <span className={`timer-label ${danger ? "danger" : ""}`}>SYSTEM LOCK IN</span>
+            {/* <span className={`timer-label ${danger ? "danger" : ""}`}>SYSTEM LOCK IN</span> */}
 
             <div className="timer-core">
                 <div className="timer-ring" />

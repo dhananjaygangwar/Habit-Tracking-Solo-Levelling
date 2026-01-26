@@ -1,9 +1,10 @@
 const pool = require("../config/db");
+const { QUEST_TYPE, QUEST_STATUS } = require("../constant");
 
 // CREATE QUEST
 const createQuest = async (req, res, next) => {
   try {
-    const { title, description, quest_type, xp_reward } = req.body;
+    const { title, description, quest_type, xp_reward, quest_duration } = req.body;
 
     // Validation
     if (!title || !quest_type) {
@@ -18,7 +19,9 @@ const createQuest = async (req, res, next) => {
       return next(error);
     }
 
-    if (!["daily_quest", "penalty"].includes(quest_type)) {
+
+
+    if (!Object.values(QUEST_TYPE).includes(quest_type)) {
       const error = new Error("Invalid quest_type. Must be 'daily_quest' or 'penalty'");
       error.statusCode = 400;
       return next(error);
@@ -30,8 +33,14 @@ const createQuest = async (req, res, next) => {
       return next(error);
     }
 
+    if (quest_duration && (quest_duration < 1 || !Number.isInteger(quest_duration))){
+      const error = new Error("Quest Duration reward must be a positive integer");
+      error.statusCode = 400;
+      return next(error);
+    }
+
     const result = await pool.query(
-      `INSERT INTO quests (user_id, title, description, quest_type, xp_reward)
+      `INSERT INTO quests (user_id, title, description, quest_type, xp_reward, quest_duration)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [
@@ -39,7 +48,8 @@ const createQuest = async (req, res, next) => {
         title,
         description || null,
         quest_type,
-        xp_reward || 10
+        xp_reward || 10,
+        quest_duration
       ]
     );
 
@@ -54,22 +64,20 @@ const getQuests = async (req, res, next) => {
   try {
     const result = await pool.query(
       `SELECT * FROM quests
-       WHERE user_id = $1
-       ORDER BY created_at DESC`,
-      [req.userId]
+       ORDER BY created_at DESC`
     );
 
     res.json(result.rows);
   } catch (err) {
     next(err);
   }
-};
+};``
 
 //UPDATE QUEST
 const updateQuest = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, description, quest_type, xp_reward } = req.body;
+    const { title, description, quest_type, xp_reward, quest_duration } = req.body;
 
     // Validation
     if (title && (title.length < 1 || title.length > 255)) {
@@ -78,7 +86,7 @@ const updateQuest = async (req, res, next) => {
       return next(error);
     }
 
-    if (quest_type && !["daily_quest", "penalty"].includes(quest_type)) {
+    if (quest_type && !Object.values(QUEST_TYPE).includes(quest_type)) {
       const error = new Error("Invalid quest_type. Must be 'daily_quest' or 'penalty'");
       error.statusCode = 400;
       return next(error);
@@ -86,6 +94,12 @@ const updateQuest = async (req, res, next) => {
 
     if (xp_reward && (xp_reward < 1 || !Number.isInteger(xp_reward))) {
       const error = new Error("XP reward must be a positive integer");
+      error.statusCode = 400;
+      return next(error);
+    }
+    
+    if (quest_duration && (quest_duration < 1 || !Number.isInteger(quest_duration))){
+      const error = new Error("Quest Duration reward must be a positive integer");
       error.statusCode = 400;
       return next(error);
     }
@@ -110,6 +124,11 @@ const updateQuest = async (req, res, next) => {
     if (xp_reward !== undefined) {
       updates.push(`xp_reward = $${paramCount++}`);
       values.push(xp_reward);
+    }
+
+    if (quest_duration != undefined){
+      updates.push(`quest_duration = $${paramCount++}`);
+      values.push(quest_duration);
     }
 
     if (updates.length === 0) {

@@ -4,6 +4,8 @@ import QuestList from "../../components/QuestList/QuestList";
 import XPBar from "../../components/XPBar/XPBar";
 import SystemTimer from "../../components/SystemTimer/SystemTimer";
 import instance from "../../../axisInstance";
+import { QUEST_STATUS, QUEST_TYPE } from "../../../../backend/src/constant";
+
 export default function Dashboard() {
 
     const [quests, setQuests] = useState([])
@@ -16,9 +18,9 @@ export default function Dashboard() {
         };
 
         quests.forEach((quest) => {
-            if (quest.quest_type?.toLowerCase() === "penalty") {
+            if (quest.quest_type?.toLowerCase() === QUEST_TYPE.PENALTY) {
                 result.punishmentQuests.push(quest);
-            } else if (quest.status == "COMPLETED") {
+            } else if (quest.status == QUEST_STATUS.COMPLETED) {
                 result.completedQuests.push(quest);
             } else {
                 result.pendingQuests.push(quest);
@@ -45,7 +47,7 @@ export default function Dashboard() {
 
     const onQuestClick = async (quest) => {
         const newStatus =
-            quest.status === "PENDING" ? "COMPLETED" : "PENDING";
+            quest.status === QUEST_STATUS.PENDING ? QUEST_STATUS.COMPLETED : QUEST_STATUS.PENDING;
 
         // 1️⃣ Optimistic UI update
         setQuests(prev =>
