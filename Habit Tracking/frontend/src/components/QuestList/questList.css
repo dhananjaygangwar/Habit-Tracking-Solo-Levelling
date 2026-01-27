@@ -5,6 +5,12 @@
   color: #b9a7d9;
 }
 
+.quest-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 /* QUEST ITEM CARD */
 .quest-item {
   display: flex;

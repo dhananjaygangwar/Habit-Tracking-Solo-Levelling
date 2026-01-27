@@ -3,242 +3,69 @@ const router = express.Router();
 const pool = require("../config/db");
 
 const authMiddleware = require("../middlewares/authMiddleware");
-const {
-  createQuest,
-  getQuests,
-  updateQuest,
-  deleteQuest
-} = require("../controllers/questController");
+const { QUEST_TYPE, QUEST_TO_DURATION_HOURS } = require("../constant");
 
 router.use(authMiddleware);
 
-/**
- * @swagger
- * /api/quests:
- *   post:
- *     summary: Create a new quest
- *     description: Create a new quest for the authenticated user
- *     tags: [Quests]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: "#/components/schemas/QuestRequest"
- *           examples:
- *             dailyQuest:
- *               value:
- *                 title: "Complete morning workout"
- *                 description: "Do 30 minutes of exercise"
- *                 quest_type: "daily_quest"
- *                 xp_reward: 10
- *             penalty:
- *               value:
- *                 title: "Missed workout"
- *                 description: "Penalty for missing workout"
- *                 quest_type: "penalty"
- *                 xp_reward: 5
- *     responses:
- *       201:
- *         description: Quest successfully created
- *         content:
- *           application/json:
- *             schema:
- *               $ref: "#/components/schemas/Quest"
- *       400:
- *         $ref: "#/components/responses/ValidationError"
- *       401:
- *         $ref: "#/components/responses/UnauthorizedError"
- *       500:
- *         $ref: "#/components/responses/ServerError"
- */
-router.post("/", createQuest);
 
-/**
- * @swagger
- * /api/quests:
- *   get:
- *     summary: Get all quests
- *     description: Retrieve all quests for the authenticated user
- *     tags: [Quests]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of quests
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: "#/components/schemas/Quest"
- *             example:
- *               - id: 1
- *                 user_id: 1
- *                 title: "Complete morning workout"
- *                 description: "Do 30 minutes of exercise"
- *                 quest_type: "daily_quest"
- *                 xp_reward: 10
- *                 completed: false
- *                 created_at: "2024-01-01T00:00:00.000Z"
- *                 updated_at: "2024-01-01T00:00:00.000Z"
- *       401:
- *         $ref: "#/components/responses/UnauthorizedError"
- *       500:
- *         $ref: "#/components/responses/ServerError"
- */
-router.get("/", getQuests);
+// create endpoints to create, update, delete and get quests
 
-/**
- * @swagger
- * /api/quests/{id}:
- *   get:
- *     summary: Get a single quest
- *     description: Retrieve a specific quest by ID (only quests owned by the authenticated user)
- *     tags: [Quests]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: Quest ID
- *         example: 1
- *     responses:
- *       200:
- *         description: Quest details
- *         content:
- *           application/json:
- *             schema:
- *               $ref: "#/components/schemas/Quest"
- *       401:
- *         $ref: "#/components/responses/UnauthorizedError"
- *       404:
- *         $ref: "#/components/responses/NotFoundError"
- *       500:
- *         $ref: "#/components/responses/ServerError"
- */
-router.get("/:id", async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    
-    const result = await pool.query(
-      `SELECT * FROM quests
-       WHERE id = $1 AND user_id = $2`,
-      [id, req.userId]
-    );
+// Create a new quest
+router.post("/", async (req, res, next) => {
+    const { quest_type, title, description, quest_xp, failed_xp } = req.body;
+    try {
+        
+        if (!quest_type){
+            return res.status(400).json({ message: "quest_type is required" });
+        }
 
-    if (result.rows.length === 0) {
-      const error = new Error("Quest not found");
-      error.statusCode = 404;
-      return next(error);
+        quest_duration = QUEST_TO_DURATION_HOURS[quest_type.toUpperCase()];
+
+        if (!quest_duration) {
+            return res.status(400).json({ message: "Invalid quest type" });
+        }
+
+        if (!title){
+            return res.status(400).json({ message: "Title is required" });
+        }
+
+        if (!description){
+            return res.status(400).json({ message: "Description is required" });
+        }
+
+        // make sure quest_xp is integer
+        const questXpInt = parseInt(quest_xp);
+        if (isNaN(questXpInt)) {
+            return res.status(400).json({ message: "quest_xp must be an integer" });
+        }
+
+        const failedXpInt = parseInt(failed_xp);
+        if (isNaN(failedXpInt)) {
+            return res.status(400).json({ message: "failed_xp must be an integer" });
+        }
+
+        const result = await pool.query(
+            "INSERT INTO quests (quest_type, title, description, quest_xp, failed_xp, quest_duration) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+            [quest_type, title, description, questXpInt, failedXpInt, quest_duration]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        next(err);
     }
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    next(err);
-  }
 });
 
-/**
- * @swagger
- * /api/quests/{id}:
- *   put:
- *     summary: Update a quest
- *     description: Update an existing quest by ID (only quests owned by the authenticated user)
- *     tags: [Quests]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: Quest ID
- *         example: 1
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *                 minLength: 1
- *                 maxLength: 255
- *                 example: "Updated quest title"
- *               description:
- *                 type: string
- *                 maxLength: 1000
- *                 nullable: true
- *                 example: "Updated quest description"
- *               quest_type:
- *                 type: string
- *                 enum: [daily_quest, penalty]
- *                 example: "daily_quest"
- *               xp_reward:
- *                 type: integer
- *                 minimum: 1
- *                 example: 15
- *     responses:
- *       200:
- *         description: Quest successfully updated
- *         content:
- *           application/json:
- *             schema:
- *               $ref: "#/components/schemas/Quest"
- *       400:
- *         $ref: "#/components/responses/ValidationError"
- *       401:
- *         $ref: "#/components/responses/UnauthorizedError"
- *       404:
- *         $ref: "#/components/responses/NotFoundError"
- *       500:
- *         $ref: "#/components/responses/ServerError"
- */
-router.put("/:id", updateQuest);
-
-/**
- * @swagger
- * /api/quests/{id}:
- *   delete:
- *     summary: Delete a quest
- *     description: Delete a quest by ID (only quests owned by the authenticated user)
- *     tags: [Quests]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: Quest ID
- *         example: 1
- *     responses:
- *       200:
- *         description: Quest successfully deleted
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Quest deleted"
- *       401:
- *         $ref: "#/components/responses/UnauthorizedError"
- *       404:
- *         $ref: "#/components/responses/NotFoundError"
- *       500:
- *         $ref: "#/components/responses/ServerError"
- */
-router.delete("/:id", deleteQuest);
+// Get all quests
+router.get("/", async (req, res, next) => {
+    try {
+        const userId = req.userId;
+        // get all quest 
+        const result = await pool.query(
+            "SELECT * FROM quests"
+        );
+        res.status(200).json(result.rows);
+    } catch (err) {
+        next(err);
+    }
+});
 
 module.exports = router;

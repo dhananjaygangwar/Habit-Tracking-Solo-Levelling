@@ -5,7 +5,8 @@ export const QUEST_STATUS = {
 }
 
 export const QUEST_TYPE = {
-    DAILY_QUEST: "daily_quest",
-    PENALTY: "penalty"
+    DAILY_QUEST: "DAILY_QUEST",
+    PENALTY: "PENALTY",
+    WEEKLY_QUEST: "WEEKLY_QUEST"
 }
 

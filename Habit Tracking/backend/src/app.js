@@ -9,6 +9,8 @@ const questLogsRoutes = require("./routes/questLogsRoutes");
 // Middlewares
 const errorHandler = require("./middlewares/errorHandler");
 
+const pool = require("./config/db");
+
 const app = express();
 
 // Middleware

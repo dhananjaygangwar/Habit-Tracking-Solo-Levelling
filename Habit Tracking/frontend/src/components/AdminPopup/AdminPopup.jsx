@@ -4,6 +4,9 @@ import Button from "../Button/Button";
 
 import "./adminPopup.css"
 
+import { QUEST_TYPE } from "../../utils/constant";
+
+
 export default function AdminPopup({
     open,
     mode,
@@ -32,44 +35,8 @@ export default function AdminPopup({
 
         >
             <form className="admin-form" onSubmit={(e) => handleSubmit(e, entity, isEdit)}>
-                {entity === "user" && (
-                    <>
-                        {isEdit && (
-                            <input
-                                name="id"
-                                type="text"
-                            className="system-input"
-                                placeholder="User ID"
-                                defaultValue={data?.id}
-                                readOnly
-                            />
-                        )}
-                        <input
-                            name="username"
-                            className="system-input"
-                            type="text"
-                            placeholder="Username"
-                            defaultValue={data?.username}
-                            required
-                        />
-                        <input
-                            name="email"
-                            className="system-input"
-                            placeholder="Email"
-                            type="email"
-                            defaultValue={data?.email}
-                        />
-                        <input
-                            name="password"
-                            className="system-input"
-                            placeholder="Password"
-                            type="password"
-                            defaultValue={data?.password}
-                        />
-                    </>
-                )}
-
-                {entity === "quest" && (
+                
+                {entity === "QUEST" && (
                     <>
                         {/* QUEST ID (ONLY ON EDIT) */}
                         {isEdit && (
@@ -101,22 +68,33 @@ export default function AdminPopup({
                         />
 
                         <input
-                            name="xp_reward"
+                            name="quest_xp"
                             className="system-input"
                             placeholder="XP Reward"
                             type="number"
-                            defaultValue={data?.xp_reward}
+                            defaultValue={data?.quest_xp}
                             required
                         />
+
+                        <input
+                            name="failed_xp"
+                            className="system-input"
+                            placeholder="Failed XP"
+                            type="number"
+                            defaultValue={data?.failed_xp}
+                            required
+                        />
+
 
                         <select
                             name="quest_type"
                             defaultValue={data?.quest_type}
                             className="system-select"
                         >
-                            <option value="daily_quest">Daily Quest</option>
-                            <option value="weekly_quest">Weekly Quest</option>
-                            <option value="penalty">Penalty</option>
+                            <option value={QUEST_TYPE.DAILY_QUEST}>Daily Quest</option>
+                            <option value={QUEST_TYPE.WEEKLY_QUEST}>Weekly Quest</option>
+                            <option value={QUEST_TYPE.PENALTY}>Penalty</option>
+
                         </select>
                     </>
                 )}

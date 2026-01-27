@@ -6,16 +6,10 @@ import instance from "../../../axisInstance";
 
 export default function Admin() {
 
-    const users = [
-        { username: "hunter1", level: 12, status: "Active" },
-        { username: "hunter2", level: 7, status: "Banned" },
-    ];
+    const [users, setUsers] = useState([]);
 
     // const [users, setUsers] = useState([]);
     const [quests, setQuests] = useState([]);
-
-
-
 
 
     useEffect(() => {
@@ -28,14 +22,13 @@ export default function Admin() {
             alert(err.response.data.message)
         })
 
-
-        // instance.get("/users").then(res => {
-        //     console.log(res);
-        //     setUsers([...res.data])
-        // }).catch(err => {
-        //     console.log("Error", err)
-        //     alert(err.response.data.message)
-        // })
+        instance.get("/auth/").then(res => {
+            console.log("users", res);
+            setUsers([...res.data])
+        }).catch(err => {
+            console.log("Error", err)
+            alert(err.response.data.message)
+        })
     }, [])
 
 
@@ -51,17 +44,12 @@ export default function Admin() {
     const openCreate = (entity) =>
         setPopup({ open: true, mode: "create", entity, data: null });
 
-    const openEdit = (entity, data) =>
-        setPopup({ open: true, mode: "edit", entity, data });
-
     const closePopup = () =>
         setPopup({ open: false, mode: null, entity: null, data: null });
 
     const handleSubmit = (formData, type, isEdit) => {
-        console.log("ALL SUBMIT DATA", formData, type, isEdit);
 
-        if (type == "quest") {
-            formData.xp_reward = parseInt(formData.xp_reward);
+        if (type == "QUEST") {
             if (!isEdit) {
                 // Creating
                 instance.post("/quests/", formData).then(res => {
@@ -85,19 +73,6 @@ export default function Admin() {
             }
         }
 
-        else if (type == "user"){
-            if (!isEdit){
-                // Creating
-                instance.post("/auth/register", formData).then(res => {
-                    console.log("success", res.data)
-                    setQuests([...quests, { ...res.data }]);
-
-                }).catch(err => {
-                    console.log("Error", err)
-                    alert(err.response.data.message)
-                })
-            }
-        }
         closePopup();
     };
     return (
@@ -107,25 +82,18 @@ export default function Admin() {
             {/* USERS */}
             <AdminTableCard
                 title="USERS"
-                columns={["username", "level", "status"]}
+                columns={users.length > 0 ? Object.keys(users[0]) : []}
                 rows={users}
-                onAdd={() => openCreate("user")}
-                onEdit={(row) => openEdit("user", row)}
-                onDelete={(row) => console.log("DELETE USER", row)}
-                extraAction={{
-                    label: "Reset XP",
-                    onClick: (row) => console.log("RESET XP", row),
-                }}
+                onAdd={() => {}}
+                tableType="users"
             />
 
             {/* QUESTS */}
             <AdminTableCard
                 title="QUESTS"
-                columns={["id", "title", "description", "xp_reward", "quest_type"]}
+                columns={quests.length > 0 ? Object.keys(quests[0]) : []}
                 rows={quests}
-                onAdd={() => openCreate("quest")}
-                onEdit={(row) => openEdit("quest", row)}
-                onDelete={(row) => console.log("DELETE QUEST", row)}
+                onAdd={() => openCreate("QUEST")}
             />
 
 
@@ -137,6 +105,9 @@ export default function Admin() {
                 onClose={closePopup}
                 onSubmit={handleSubmit}
             />
+
+            <br></br>
+            <br></br>
         </div>
     );
 }

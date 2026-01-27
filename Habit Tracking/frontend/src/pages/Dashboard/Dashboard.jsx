@@ -5,10 +5,17 @@ import XPBar from "../../components/XPBar/XPBar";
 import SystemTimer from "../../components/SystemTimer/SystemTimer";
 import instance from "../../../axisInstance";
 import { QUEST_STATUS, QUEST_TYPE } from "../../../../backend/src/constant";
+import ConfirmPopup from "../../components/ConfirmPopup/ConfirmPopup";
 
 export default function Dashboard() {
 
     const [quests, setQuests] = useState([])
+
+    const [showConfirm, setShowConfirm] = useState({
+        isOpen: false,
+        quest: {}
+    });
+
 
     const { completedQuests, pendingQuests, punishmentQuests } = useMemo(() => {
         const result = {
@@ -18,7 +25,7 @@ export default function Dashboard() {
         };
 
         quests.forEach((quest) => {
-            if (quest.quest_type?.toLowerCase() === QUEST_TYPE.PENALTY) {
+            if (quest.quest_type === QUEST_TYPE.PENALTY) {
                 result.punishmentQuests.push(quest);
             } else if (quest.status == QUEST_STATUS.COMPLETED) {
                 result.completedQuests.push(quest);
@@ -46,8 +53,12 @@ export default function Dashboard() {
 
 
     const onQuestClick = async (quest) => {
-        const newStatus =
-            quest.status === QUEST_STATUS.PENDING ? QUEST_STATUS.COMPLETED : QUEST_STATUS.PENDING;
+
+        if (quest.status === QUEST_STATUS.COMPLETED) {
+            return;
+        }
+
+        const newStatus = QUEST_STATUS.COMPLETED
 
         // 1️⃣ Optimistic UI update
         setQuests(prev =>
@@ -60,9 +71,10 @@ export default function Dashboard() {
 
         // 2️⃣ API call
         try {
-            await instance.patch(`quest-logs/${quest.id}`, {
+            await instance.put(`quest-logs/${quest.id}`, {
                 status: newStatus,
             });
+            setShowConfirm({ isOpen: false, quest: {} })
         } catch (err) {
             console.error("Error", err);
             alert(err.response?.data?.message || "Something went wrong");
@@ -75,6 +87,8 @@ export default function Dashboard() {
                         : item
                 )
             );
+
+            setShowConfirm({ isOpen: false, quest: {} })
         }
     };
 
@@ -99,7 +113,7 @@ export default function Dashboard() {
             <QuestList
                 title="Plan"
                 items={pendingQuests}
-                onSelect={onQuestClick}
+                onSelect={(quest) => setShowConfirm({ isOpen: true, quest: {...quest} })}
             />
 
             <br />
@@ -107,16 +121,26 @@ export default function Dashboard() {
             <QuestList
                 title="Completed"
                 items={completedQuests}
-                onSelect={onQuestClick}
+                onSelect={() => {}}
             />
 
             <br />
             <QuestList
                 title="Punishments"
                 items={punishmentQuests}
-                onSelect={onQuestClick}
+                onSelect={(quest) => {
+                    if (quest.status === QUEST_STATUS.PENDING) setShowConfirm({ isOpen: true, quest: {...quest} })
+                }}
             />
-
+            <ConfirmPopup
+                open={showConfirm.isOpen}
+                title="MARK QUEST AS COMPLETED?"
+                message="This action cannot be undone."
+                confirmText="Confirm"
+                dangerous={true}
+                onConfirm={() => onQuestClick(showConfirm.quest)}
+                onCancel={() => setShowConfirm({ isOpen: false, quest: {} })}
+            />
             <br />
             <br />
         </>

@@ -2,243 +2,113 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../config/db");
 const authMiddleware = require("../middlewares/authMiddleware");
-const { addXP } = require("../utils/xpCalculator");
+const { applyXpDelta, QUEST_STATUS } = require("../constant");
 
 router.use(authMiddleware);
 
-/**
- * @swagger
- * /api/quest-logs:
- *   get:
- *     summary: Get all quest logs
- *     description: Retrieve all quest logs for the authenticated user
- *     tags: [QuestLogs]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of quest logs
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: "#/components/schemas/QuestLog"
- *             example:
- *               - id: 1
- *                 status: "PENDING"
- *                 created_at: "2024-01-01T00:00:00.000Z"
- *                 title: "Complete morning workout"
- *                 description: "Do 30 minutes of exercise"
- *                 quest_type: "daily_quest"
- *                 xp_reward: 10
- *       401:
- *         $ref: "#/components/responses/UnauthorizedError"
- *       500:
- *         $ref: "#/components/responses/ServerError"
- */
+// endpoint to get quest logs for the authenticated user with filters like status and date range
 router.get("/", async (req, res, next) => {
-  try {
-    const userId = req.userId; 
-    console.log("USERID IS", userId)
+    const userId = req.userId;
+    const { status, startDate, endDate } = req.query;
 
-    const { rows } = await pool.query(`
-      SELECT
-        *
-      FROM quest_logs ql
-      JOIN quests q ON q.id = ql.quest_id
-      WHERE ql.user_id = $1 and complete_by >= NOW()
-      ORDER BY ql.created_at DESC
-    `, [userId]);
+    let query = `SELECT ql.id as id, q.title as title, ql.status as status , q.quest_type as quest_type, q.description as description, ql.complete_by as complete_by 
+    FROM quest_logs ql JOIN quests q ON ql.quest_id = q.id WHERE ql.user_id = $1 AND ql.status != $2 ORDER BY ql.assigned_at DESC`;
+    const params = [userId, QUEST_STATUS.FAILED];
 
-    res.json(rows);
-  } catch (err) {
-    next(err);
-  }
+    if (status) {
+        query += " AND ql.status = $2";
+        params.push(status);
+    }
+
+    if (startDate && endDate) {
+        query += " AND ql.assigned_at BETWEEN $3 AND $4";
+        params.push(startDate, endDate);
+    }
+
+    try {
+        const result = await pool.query(query, params);
+        res.status(200).json(result.rows);
+    } catch (err) {
+        next(err);
+    }
 });
 
-/**
- * @swagger
- * /api/quest-logs/{id}:
- *   get:
- *     summary: Get a single quest log
- *     description: Retrieve a specific quest log by ID for the authenticated user
- *     tags: [QuestLogs]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: Quest log ID
- *         example: 1
- *     responses:
- *       200:
- *         description: Quest log details
- *         content:
- *           application/json:
- *             schema:
- *               $ref: "#/components/schemas/QuestLog"
- *       401:
- *         $ref: "#/components/responses/UnauthorizedError"
- *       404:
- *         $ref: "#/components/responses/NotFoundError"
- *       500:
- *         $ref: "#/components/responses/ServerError"
- */
-router.get("/:id", async (req, res, next) => {
-  try {
+// get failed quests
+router.get("/failed", async (req, res, next) => {
+    const userId = req.userId;
+    try {
+        const result = await pool.query(
+            `SELECT ql.id as id, q.title as title, ql.status as status , q.quest_type as quest_type, q.description as description, ql.complete_by as complete_by 
+             FROM quest_logs ql JOIN quests q ON ql.quest_id = q.id 
+             WHERE ql.user_id = $1 AND ql.status = $2 ORDER BY ql.assigned_at DESC`,
+            [userId, QUEST_STATUS.FAILED]
+        );
+        res.status(200).json(result.rows);
+    } catch (err) {
+        next(err);
+    }
+});
+
+// endpoint to update the status of a quest log (e.g., mark as completed)
+router.put("/:id", async (req, res, next) => {
+    const userId = req.userId;
     const questLogId = req.params.id;
-    const userId = req.userId;
-
-    const { rows } = await pool.query(`
-      SELECT
-        ql.id,
-        ql.status,
-        ql.created_at,
-        q.title,
-        q.description,
-        q.quest_type,
-        q.xp_reward
-      FROM quest_logs ql
-      JOIN quests q ON q.id = ql.quest_id
-      WHERE ql.id = $1 AND ql.user_id = $2
-    `, [questLogId, userId]);
-
-    if (rows.length === 0) {
-      const error = new Error("Quest log not found");
-      error.statusCode = 404;
-      return next(error);
-    }
-
-    res.json(rows[0]);
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * @swagger
- * /api/quest-logs/{id}:
- *   patch:
- *     summary: Update quest log status
- *     description: Update the status of a quest log (COMPLETED or FAILED)
- *     tags: [QuestLogs]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: Quest log ID
- *         example: 1
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [status]
- *             properties:
- *               status:
- *                 type: string
- *                 enum: [COMPLETED, FAILED]
- *                 description: Quest log status
- *                 example: "COMPLETED"
- *           examples:
- *             completed:
- *               value:
- *                 status: "COMPLETED"
- *             failed:
- *               value:
- *                 status: "FAILED"
- *     responses:
- *       200:
- *         description: Quest log successfully updated
- *         content:
- *           application/json:
- *             schema:
- *               $ref: "#/components/schemas/QuestLogFull"
- *       400:
- *         $ref: "#/components/responses/ValidationError"
- *       401:
- *         $ref: "#/components/responses/UnauthorizedError"
- *       404:
- *         $ref: "#/components/responses/NotFoundError"
- *       500:
- *         $ref: "#/components/responses/ServerError"
- */
-router.patch("/:id", async (req, res, next) => {
-  const client = await pool.connect();
-  
-  try {
-    await client.query("BEGIN");
-    
-    const questLogId = req.params.id; 
     const { status } = req.body;
-    const userId = req.userId;
 
-    if (!["COMPLETED", "FAILED", "PENDING"].includes(status)) {
-      await client.query("ROLLBACK");
-      const error = new Error("Invalid status");
-      error.statusCode = 400;
-      return next(error);
+    if (status !== QUEST_STATUS.COMPLETED) {
+        return res.status(400).json({ message: "Quest can only be marked as completed" });
     }
 
-    const questLogResult = await client.query(`
-      SELECT ql.*, q.xp_reward, q.quest_type
-      FROM quest_logs ql
-      JOIN quests q ON q.id = ql.quest_id
-      WHERE ql.id = $1 AND ql.user_id = $2
-      FOR UPDATE
-    `, [questLogId, userId]);
+    const client = await pool.connect();
 
-    if (questLogResult.rows.length === 0) {
-      await client.query("ROLLBACK");
-      const error = new Error("Quest log not found");
-      error.statusCode = 404;
-      return next(error);
+    try {
+
+        await client.query("BEGIN");
+        // Get the quest log to ensure it belongs to the user
+        const questLogResult = await client.query(
+            `SELECT q.id as quest_id, q.quest_xp as quest_xp, ql.status as status, ql.id as quest_log_id, ql.complete_by as complete_by
+                    FROM quests q
+                    JOIN quest_logs ql ON q.id = ql.quest_id
+                    WHERE ql.id = $1 AND ql.user_id = $2 FOR UPDATE`,
+            [questLogId, userId]
+        );
+
+
+        if (questLogResult.rows.length === 0) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ message: "Quest log not found" });
+        }
+
+        let updatedQuestLog = {}
+
+        if (questLogResult.rows[0].status === QUEST_STATUS.COMPLETED) {
+            await client.query("ROLLBACK");
+            return res.status(400).json({ message: "Quest log is already completed" });
+        }
+        
+        console.log("complete by", questLogResult.rows[0].complete_by, "new Date()", new Date());
+        if (new Date() > new Date(questLogResult.rows[0].complete_by)) {
+            await client.query("ROLLBACK");
+            return res.status(400).json({ message: "Cannot complete quest log after its completion deadline" });
+        }
+
+        const updateResult = await client.query(
+            "UPDATE quest_logs SET status = $1 WHERE id = $2 and user_id = $3 RETURNING *",
+            [status, questLogId, userId]
+        );
+        updatedQuestLog = updateResult.rows[0];
+        // Add XP to user
+        const questXp = questLogResult.rows[0].quest_xp;
+        await applyXpDelta(userId, questXp, client);
+
+
+        await client.query("COMMIT");
+        res.status(200).json(updatedQuestLog);
+    } catch (err) {
+        await client.query("ROLLBACK");
+        next(err);
+    } finally {
+        client.release();
     }
-
-    const questLog = questLogResult.rows[0];
-    
-    if (questLog.status === status) {
-      await client.query("ROLLBACK");
-      return res.json(questLog);
-    }
-
-    const updateResult = await client.query(`
-      UPDATE quest_logs
-      SET status = $1, updated_at = NOW()
-      WHERE id = $2 AND user_id = $3
-      RETURNING *
-    `, [status, questLogId, userId]);
-
-    let xpResult = null;
-    if (status === "COMPLETED" && questLog.status !== "COMPLETED") {
-      xpResult = await addXP(client, userId, questLog.xp_reward);
-    }
-
-    await client.query("COMMIT");
-
-    res.json({
-      ...updateResult.rows[0],
-      xp: xpResult ? xpResult.xp : undefined,
-      level: xpResult ? xpResult.level : undefined,
-      levelUp: xpResult ? xpResult.levelUp : undefined,
-      xpGained: xpResult ? xpResult.xpGained : undefined
-    });
-  } catch (err) {
-    await client.query("ROLLBACK");
-    next(err);
-  } finally {
-    client.release();
-  }
 });
-
-
 module.exports = router;
