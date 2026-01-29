@@ -34,6 +34,7 @@ function App() {
         <Route path="/compare" element={ <ProtectedRoute><Compare /></ProtectedRoute> } />
         <Route path="/login" element={ <PublicRoute><Login /></PublicRoute> } />
         <Route path="/admin" element={ <ProtectedRoute><Admin /></ProtectedRoute> } />
+        <Route path="/admin" element={ <ProtectedRoute><Admin /></ProtectedRoute> } />
       </Routes>
 
       <BottomNav
